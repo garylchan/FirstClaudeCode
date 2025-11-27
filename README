@@ -1,0 +1,112 @@
+# Classic Pong Game
+
+A modern, browser-based implementation of the classic Pong game with a cyberpunk neon aesthetic and optional power-up mode.
+
+## Features
+
+### Game Modes
+
+- **Classic Mode**: Traditional Pong gameplay - simple, clean, and nostalgic
+- **Power-Up Mode**: Dynamic gameplay with automatic power-ups that activate every 5 seconds without scoring
+
+### Power-Ups (Power-Up Mode Only)
+
+All power-ups affect both player and AI equally for fair gameplay:
+
+1. **SPEED BOOST** (Yellow) - Both paddles move 50% faster
+2. **BALL ACCELERATION** (Orange) - Ball speed increases by 50%
+3. **PADDLES SHRINK** (Magenta) - Both paddles become 30% smaller
+4. **TWO BALLS** (Cyan) - A second ball appears on the field
+
+- Power-ups last 5 seconds
+- No repeating power-ups - always get a different one each time
+- Visual feedback with glowing paddles and on-screen timer
+- Power-ups reset when anyone scores
+
+### Visual Design
+
+- Cyberpunk neon aesthetic with cyan and magenta color scheme
+- Glowing effects on all game elements
+- Retro Courier New font
+- Smooth animations and transitions
+- Dark gradient background
+
+### Audio
+
+- Web Audio API generated sound effects
+- Distinct tones for paddle hits, wall bounces, scoring, and power-ups
+- No external audio files required
+
+### Controls
+
+- **Arrow Up/Down**: Move player paddle
+- **Spacebar**: Pause/unpause game
+- **Escape**: Return to menu
+
+### Difficulty Levels
+
+- **Easy**: Slower AI with delayed reaction time
+- **Medium**: Balanced AI speed and response
+- **Hard**: Fast AI with quick reactions
+
+## How to Play
+
+1. Open `pong.html` in any modern web browser
+2. Select game mode: Classic or Power-Up
+3. Choose difficulty level: Easy, Medium, or Hard
+4. First to 5 points wins!
+
+### Power-Up Mode Strategy
+
+- Power-ups automatically activate after 5 seconds without scoring
+- They affect both players equally, so adapt your strategy quickly
+- Use TWO BALLS chaos to your advantage
+- Shrunk paddles and accelerated balls force mistakes - stay focused!
+
+## Technical Details
+
+- Single HTML file - no dependencies
+- Pure JavaScript (no frameworks)
+- HTML5 Canvas for rendering
+- Web Audio API for sound
+- Responsive design
+- ~550 lines of code
+
+## Browser Compatibility
+
+Works in all modern browsers that support:
+- HTML5 Canvas
+- Web Audio API
+- ES6+ JavaScript
+
+Tested on:
+- Chrome
+- Firefox
+- Safari
+- Edge
+
+## Game Mechanics
+
+- Ball speed increases slightly with each paddle hit
+- Ball spin based on paddle hit position
+- AI difficulty affects speed and reaction time
+- Paddles cannot move off-screen
+- Ball resets to center after each score
+- Power-ups designed to force scoring and prevent long rallies
+
+## File Structure
+
+```
+/
+├── pong.html          # Complete game (HTML + CSS + JavaScript)
+├── README.md          # This file
+└── AGENT.md           # Development history and AI collaboration notes
+```
+
+## Credits
+
+Created with Claude Code (Anthropic)
+
+## License
+
+Free to use and modify for personal or educational purposes.

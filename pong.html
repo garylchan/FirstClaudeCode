@@ -33,7 +33,7 @@
             background: linear-gradient(180deg, #0d1117 0%, #1a1f3a 100%);
         }
 
-        #menu, #gameOver {
+        #menu, #modeSelect, #gameOver {
             position: absolute;
             top: 50%;
             left: 50%;
@@ -102,6 +102,27 @@
             text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
             box-shadow: 0 0 30px rgba(0, 255, 255, 0.6);
         }
+
+        #powerupNotification {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 28px;
+            background-color: rgba(0, 255, 0, 0.2);
+            padding: 15px 30px;
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.6);
+            animation: fadeOut 2s forwards;
+        }
+
+        @keyframes fadeOut {
+            0% { opacity: 1; }
+            70% { opacity: 1; }
+            100% { opacity: 0; }
+        }
     </style>
 </head>
 <body>
@@ -110,15 +131,23 @@
 
         <div id="menu">
             <h1>PONG</h1>
-            <h2>Select Difficulty</h2>
-            <button class="menu-option" onclick="startGame('easy')">EASY</button>
-            <button class="menu-option" onclick="startGame('medium')">MEDIUM</button>
-            <button class="menu-option" onclick="startGame('hard')">HARD</button>
+            <h2>Select Mode</h2>
+            <button class="menu-option" onclick="selectMode('classic')">CLASSIC</button>
+            <button class="menu-option" onclick="selectMode('powerup')">POWER-UP</button>
             <div id="instructions">
                 Controls: Arrow Up/Down<br>
                 Pause: Spacebar<br>
                 First to 5 points wins!
             </div>
+        </div>
+
+        <div id="modeSelect" class="hidden">
+            <h1>PONG</h1>
+            <h2>Select Difficulty</h2>
+            <button class="menu-option" onclick="startGame('easy')">EASY</button>
+            <button class="menu-option" onclick="startGame('medium')">MEDIUM</button>
+            <button class="menu-option" onclick="startGame('hard')">HARD</button>
+            <button class="menu-option" onclick="returnToMenu()">BACK</button>
         </div>
 
         <div id="gameOver" class="hidden">
@@ -129,18 +158,22 @@
         </div>
 
         <div id="pauseText" class="hidden">PAUSED</div>
+        <div id="powerupNotification" class="hidden"></div>
     </div>
 
     <script>
         const canvas = document.getElementById('pongCanvas');
         const ctx = canvas.getContext('2d');
         const menu = document.getElementById('menu');
+        const modeSelect = document.getElementById('modeSelect');
         const gameOverScreen = document.getElementById('gameOver');
         const pauseText = document.getElementById('pauseText');
+        const powerupNotification = document.getElementById('powerupNotification');
 
         // Game state
-        let gameState = 'menu'; // menu, playing, paused, gameOver
+        let gameState = 'menu'; // menu, modeSelect, playing, paused, gameOver
         let difficulty = 'medium';
+        let gameMode = 'classic'; // classic or powerup
         let animationId;
 
         // Game objects
@@ -179,6 +212,40 @@
         let playerScore = 0;
         let aiScore = 0;
         const winningScore = 5;
+
+        // Power-up system (auto-activation)
+        let activePowerup = null;
+        let powerupTimer = 0;
+        let noScoreTimer = 0;
+        let lastPowerupName = null; // Track last powerup to avoid repeats
+        const NO_SCORE_INTERVAL = 300; // frames (~5 seconds at 60fps)
+        const POWERUP_DURATION = 300; // frames (~5 seconds)
+
+        // Second ball for TWO BALLS power-up
+        let secondBall = null;
+
+        const POWERUP_TYPES = {
+            SPEED_BOOST: {
+                name: 'SPEED_BOOST',
+                color: '#ffff00',
+                notification: 'SPEED BOOST!'
+            },
+            BALL_ACCELERATION: {
+                name: 'BALL_ACCELERATION',
+                color: '#ff9900',
+                notification: 'BALL SPEED UP!'
+            },
+            PADDLE_SHRINK: {
+                name: 'PADDLE_SHRINK',
+                color: '#ff00ff',
+                notification: 'PADDLES SHRINK!'
+            },
+            TWO_BALLS: {
+                name: 'TWO_BALLS',
+                color: '#00ffff',
+                notification: 'TWO BALLS!'
+            }
+        };
 
         // Audio context for sound effects
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -233,6 +300,23 @@
 
             oscillator.start(audioContext.currentTime);
             oscillator.stop(audioContext.currentTime + 0.3);
+        }
+
+        function playPowerupSound() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.value = 440;
+            oscillator.type = 'sine';
+
+            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.2);
         }
 
         // Keyboard controls
@@ -297,6 +381,18 @@
             ctx.shadowBlur = 0;
         }
 
+        function drawPowerupTimer() {
+            if (activePowerup && powerupTimer > 0) {
+                const timeLeft = Math.ceil(powerupTimer / 60);
+                ctx.font = '18px Courier New';
+                ctx.fillStyle = activePowerup.color;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = activePowerup.color;
+                ctx.fillText(`${activePowerup.notification.replace('!', '')}: ${timeLeft}s`, 10, canvas.height - 10);
+                ctx.shadowBlur = 0;
+            }
+        }
+
         function draw() {
             // Clear canvas
             ctx.fillStyle = '#0d1117';
@@ -305,15 +401,143 @@
             // Draw net
             drawNet();
 
-            // Draw paddles
-            drawRect(player.x, player.y, player.width, player.height);
-            drawRect(ai.x, ai.y, ai.width, ai.height);
+            // Draw paddles (with powerup glow effect if active)
+            if (activePowerup && powerupTimer > 0) {
+                // Both paddles glow with powerup color
+                ctx.fillStyle = activePowerup.color;
+                ctx.shadowBlur = 25;
+                ctx.shadowColor = activePowerup.color;
+                ctx.fillRect(player.x, player.y, player.width, player.height);
+                ctx.fillRect(ai.x, ai.y, ai.width, ai.height);
+                ctx.shadowBlur = 0;
+            } else {
+                drawRect(player.x, player.y, player.width, player.height);
+                drawRect(ai.x, ai.y, ai.width, ai.height);
+            }
 
-            // Draw ball
+            // Draw ball(s)
             drawCircle(ball.x, ball.y, ball.width);
+            if (secondBall) {
+                drawCircle(secondBall.x, secondBall.y, secondBall.width);
+            }
+
+            // Draw power-up timer
+            if (gameMode === 'powerup') {
+                drawPowerupTimer();
+            }
 
             // Draw score
             drawScore();
+        }
+
+        // Power-up functions
+        function activateRandomPowerup() {
+            const types = Object.values(POWERUP_TYPES);
+
+            // Filter out the last powerup to avoid repeats
+            let availableTypes = types;
+            if (lastPowerupName) {
+                availableTypes = types.filter(type => type.name !== lastPowerupName);
+            }
+
+            // Pick a random powerup from available types
+            const randomType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+
+            // Store this as the last powerup
+            lastPowerupName = randomType.name;
+
+            activatePowerup(randomType);
+        }
+
+        function activatePowerup(type) {
+            // Deactivate previous powerup first
+            if (activePowerup) {
+                deactivatePowerup();
+            }
+
+            activePowerup = { ...type, originalValues: {} };
+            powerupTimer = POWERUP_DURATION;
+
+            console.log('Power-up activated:', type.name);
+
+            switch(type.name) {
+                case 'SPEED_BOOST':
+                    activePowerup.originalValues.playerSpeed = player.speed;
+                    activePowerup.originalValues.aiSpeed = ai.speed;
+                    player.speed = 9;
+                    ai.speed = 6.75;
+                    console.log('Paddle speed boosted');
+                    break;
+                case 'BALL_ACCELERATION':
+                    activePowerup.originalValues.speedMultiplier = ball.speedMultiplier;
+                    ball.speedMultiplier *= 1.5;
+                    console.log('Ball accelerated');
+                    break;
+                case 'PADDLE_SHRINK':
+                    activePowerup.originalValues.playerHeight = player.height;
+                    activePowerup.originalValues.aiHeight = ai.height;
+                    player.height = paddleHeight * 0.7;
+                    ai.height = paddleHeight * 0.7;
+                    console.log('Paddles shrunk');
+                    break;
+                case 'TWO_BALLS':
+                    // Create second ball
+                    secondBall = {
+                        x: canvas.width / 2,
+                        y: canvas.height / 2,
+                        width: ballSize,
+                        height: ballSize,
+                        dx: (Math.random() > 0.5 ? 1 : -1) * ball.baseSpeed,
+                        dy: (Math.random() * 2 - 1) * ball.baseSpeed,
+                        baseSpeed: ball.baseSpeed,
+                        speedMultiplier: ball.speedMultiplier
+                    };
+                    console.log('Second ball spawned');
+                    break;
+            }
+
+            playPowerupSound();
+            showNotification(type.notification);
+        }
+
+        function deactivatePowerup() {
+            if (!activePowerup) return;
+
+            console.log('Power-up deactivated:', activePowerup.name);
+
+            switch(activePowerup.name) {
+                case 'SPEED_BOOST':
+                    player.speed = activePowerup.originalValues.playerSpeed;
+                    ai.speed = activePowerup.originalValues.aiSpeed;
+                    break;
+                case 'BALL_ACCELERATION':
+                    ball.speedMultiplier = activePowerup.originalValues.speedMultiplier;
+                    break;
+                case 'PADDLE_SHRINK':
+                    player.height = activePowerup.originalValues.playerHeight;
+                    ai.height = activePowerup.originalValues.aiHeight;
+                    break;
+                case 'TWO_BALLS':
+                    secondBall = null;
+                    break;
+            }
+
+            activePowerup = null;
+            powerupTimer = 0;
+        }
+
+        function showNotification(text) {
+            powerupNotification.textContent = text;
+            powerupNotification.classList.remove('hidden');
+            powerupNotification.style.animation = 'none';
+
+            setTimeout(() => {
+                powerupNotification.style.animation = 'fadeOut 2s forwards';
+            }, 10);
+
+            setTimeout(() => {
+                powerupNotification.classList.add('hidden');
+            }, 2000);
         }
 
         // Update game logic
@@ -331,13 +555,42 @@
             // Update AI paddle
             updateAI();
 
+            // Power-up logic (auto-activation)
+            if (gameMode === 'powerup') {
+                noScoreTimer++;
+
+                // Activate power-up if no one has scored in 5 seconds
+                if (noScoreTimer >= NO_SCORE_INTERVAL && !activePowerup) {
+                    activateRandomPowerup();
+                    noScoreTimer = 0;
+                }
+
+                // Count down active powerup timer
+                if (powerupTimer > 0) {
+                    powerupTimer--;
+                    if (powerupTimer === 0) {
+                        deactivatePowerup();
+                    }
+                }
+            }
+
             // Update ball position
             ball.x += ball.dx * ball.speedMultiplier;
             ball.y += ball.dy * ball.speedMultiplier;
 
+            // Update second ball if it exists
+            if (secondBall) {
+                secondBall.x += secondBall.dx * secondBall.speedMultiplier;
+                secondBall.y += secondBall.dy * secondBall.speedMultiplier;
+            }
+
             // Ball collision with top/bottom walls
             if (ball.y <= 0 || ball.y + ball.height >= canvas.height) {
                 ball.dy *= -1;
+                playWallSound();
+            }
+            if (secondBall && (secondBall.y <= 0 || secondBall.y + secondBall.height >= canvas.height)) {
+                secondBall.dy *= -1;
                 playWallSound();
             }
 
@@ -370,11 +623,37 @@
                 playPaddleSound();
             }
 
+            // Second ball collision with paddles
+            if (secondBall && checkCollision(secondBall, player)) {
+                secondBall.dx = Math.abs(secondBall.dx);
+                secondBall.x = player.x + player.width;
+
+                const hitPos = (secondBall.y + secondBall.height / 2) - (player.y + player.height / 2);
+                secondBall.dy = hitPos * 0.1;
+
+                secondBall.speedMultiplier = Math.min(secondBall.speedMultiplier + 0.05, 2);
+
+                playPaddleSound();
+            }
+
+            if (secondBall && checkCollision(secondBall, ai)) {
+                secondBall.dx = -Math.abs(secondBall.dx);
+                secondBall.x = ai.x - secondBall.width;
+
+                const hitPos = (secondBall.y + secondBall.height / 2) - (ai.y + ai.height / 2);
+                secondBall.dy = hitPos * 0.1;
+
+                secondBall.speedMultiplier = Math.min(secondBall.speedMultiplier + 0.05, 2);
+
+                playPaddleSound();
+            }
+
             // Score points
             if (ball.x < 0) {
                 aiScore++;
                 playScoreSound();
                 resetBall();
+                resetPowerupTimers();
                 checkWin();
             }
 
@@ -382,6 +661,24 @@
                 playerScore++;
                 playScoreSound();
                 resetBall();
+                resetPowerupTimers();
+                checkWin();
+            }
+
+            // Second ball scoring
+            if (secondBall && secondBall.x < 0) {
+                aiScore++;
+                playScoreSound();
+                secondBall = null;
+                resetPowerupTimers();
+                checkWin();
+            }
+
+            if (secondBall && secondBall.x > canvas.width) {
+                playerScore++;
+                playScoreSound();
+                secondBall = null;
+                resetPowerupTimers();
                 checkWin();
             }
         }
@@ -438,6 +735,17 @@
             ball.speedMultiplier = 1;
         }
 
+        function resetPowerupTimers() {
+            // Reset the no-score timer when someone scores
+            noScoreTimer = 0;
+            // Deactivate any active power-ups
+            if (activePowerup) {
+                deactivatePowerup();
+            }
+            // Remove second ball
+            secondBall = null;
+        }
+
         function checkWin() {
             if (playerScore >= winningScore) {
                 endGame('YOU WIN!');
@@ -460,19 +768,51 @@
             animationId = requestAnimationFrame(gameLoop);
         }
 
+        // Mode selection
+        function selectMode(mode) {
+            gameMode = mode;
+            menu.classList.add('hidden');
+            modeSelect.classList.remove('hidden');
+        }
+
         // Start game
         function startGame(selectedDifficulty) {
             difficulty = selectedDifficulty;
             gameState = 'playing';
             menu.classList.add('hidden');
+            modeSelect.classList.add('hidden');
             gameOverScreen.classList.add('hidden');
 
             // Reset game
             playerScore = 0;
             aiScore = 0;
             player.y = canvas.height / 2 - paddleHeight / 2;
+            player.height = paddleHeight;
+            player.width = paddleWidth;
+            player.speed = 6;
             ai.y = canvas.height / 2 - paddleHeight / 2;
+            ai.height = paddleHeight;
+            ai.width = paddleWidth;
+            // Reset AI speed based on difficulty
+            switch(difficulty) {
+                case 'easy':
+                    ai.speed = 3;
+                    break;
+                case 'medium':
+                    ai.speed = 4.5;
+                    break;
+                case 'hard':
+                    ai.speed = 6;
+                    break;
+            }
             resetBall();
+
+            // Reset power-ups
+            activePowerup = null;
+            powerupTimer = 0;
+            noScoreTimer = 0;
+            lastPowerupName = null;
+            secondBall = null;
 
             if (!animationId) {
                 gameLoop();
@@ -482,15 +822,30 @@
         function returnToMenu() {
             gameState = 'menu';
             menu.classList.remove('hidden');
+            modeSelect.classList.add('hidden');
             gameOverScreen.classList.add('hidden');
             pauseText.classList.add('hidden');
+            powerupNotification.classList.add('hidden');
 
             // Reset game
             playerScore = 0;
             aiScore = 0;
             player.y = canvas.height / 2 - paddleHeight / 2;
+            player.height = paddleHeight;
+            player.width = paddleWidth;
+            player.speed = 6;
             ai.y = canvas.height / 2 - paddleHeight / 2;
+            ai.height = paddleHeight;
+            ai.width = paddleWidth;
+            ai.speed = 4.5;
             resetBall();
+
+            // Reset power-ups
+            activePowerup = null;
+            powerupTimer = 0;
+            noScoreTimer = 0;
+            lastPowerupName = null;
+            secondBall = null;
 
             draw();
         }
