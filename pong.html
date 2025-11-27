@@ -12,13 +12,13 @@
         }
 
         body {
-            background-color: #000;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0a0e27 100%);
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             font-family: 'Courier New', monospace;
-            color: #fff;
+            color: #00ffff;
         }
 
         #gameContainer {
@@ -26,9 +26,11 @@
         }
 
         canvas {
-            border: 2px solid #fff;
+            border: 2px solid #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5), 0 0 40px rgba(0, 255, 255, 0.3);
             display: block;
             margin: 0 auto;
+            background: linear-gradient(180deg, #0d1117 0%, #1a1f3a 100%);
         }
 
         #menu, #gameOver {
@@ -36,9 +38,10 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background-color: rgba(0, 0, 0, 0.9);
+            background-color: rgba(10, 14, 39, 0.95);
             padding: 40px;
-            border: 3px solid #fff;
+            border: 3px solid #00ffff;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.6);
             text-align: center;
         }
 
@@ -46,11 +49,15 @@
             font-size: 48px;
             margin-bottom: 30px;
             letter-spacing: 5px;
+            color: #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
         }
 
         h2 {
             font-size: 32px;
             margin-bottom: 20px;
+            color: #00ffff;
+            text-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
         }
 
         .menu-option {
@@ -58,8 +65,8 @@
             margin: 15px 0;
             padding: 10px 20px;
             background-color: transparent;
-            color: #fff;
-            border: 2px solid #fff;
+            color: #00ffff;
+            border: 2px solid #00ffff;
             cursor: pointer;
             transition: all 0.3s;
             font-family: 'Courier New', monospace;
@@ -67,8 +74,9 @@
         }
 
         .menu-option:hover {
-            background-color: #fff;
-            color: #000;
+            background-color: #00ffff;
+            color: #0a0e27;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
         }
 
         .hidden {
@@ -87,9 +95,12 @@
             left: 50%;
             transform: translate(-50%, -50%);
             font-size: 48px;
-            background-color: rgba(0, 0, 0, 0.8);
+            background-color: rgba(10, 14, 39, 0.95);
             padding: 30px 60px;
-            border: 3px solid #fff;
+            border: 3px solid #00ffff;
+            color: #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.6);
         }
     </style>
 </head>
@@ -251,13 +262,19 @@
 
         // Draw functions
         function drawRect(x, y, width, height) {
-            ctx.fillStyle = '#fff';
+            ctx.fillStyle = '#00ffff';
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#00ffff';
             ctx.fillRect(x, y, width, height);
+            ctx.shadowBlur = 0;
         }
 
         function drawCircle(x, y, size) {
-            ctx.fillStyle = '#fff';
+            ctx.fillStyle = '#ff00ff';
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#ff00ff';
             ctx.fillRect(x, y, size, size);
+            ctx.shadowBlur = 0;
         }
 
         function drawNet() {
@@ -272,14 +289,17 @@
 
         function drawScore() {
             ctx.font = '48px Courier New';
-            ctx.fillStyle = '#fff';
+            ctx.fillStyle = '#00ffff';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#00ffff';
             ctx.fillText(playerScore, canvas.width / 4, 60);
             ctx.fillText(aiScore, 3 * canvas.width / 4, 60);
+            ctx.shadowBlur = 0;
         }
 
         function draw() {
             // Clear canvas
-            ctx.fillStyle = '#000';
+            ctx.fillStyle = '#0d1117';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             // Draw net
