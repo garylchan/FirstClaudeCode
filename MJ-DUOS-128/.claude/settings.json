@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(test -d /Users/garychan/Claude/MJ-DUOS-128/MJ-DUOS-128/.github)",
+      "Bash(gh run list --repo garylchan/MJ-DUOS-128 --limit 5)",
+      "Bash(npm run build)",
+      "WebFetch(domain:garylchan.github.io)",
+      "Bash(gh api repos/garylchan/MJ-DUOS-128/contents/index.html --jq '.content')",
+      "Bash(gh api repos/garylchan/MJ-DUOS-128/git/refs/heads/main --jq '.object.sha')",
+      "Bash(npx vite build)"
+    ]
+  }
+}
